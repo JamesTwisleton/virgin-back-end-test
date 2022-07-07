@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -17,7 +18,6 @@ import java.util.concurrent.ExecutionException;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
@@ -36,7 +36,7 @@ public class FlightInfoResourceTest extends TestResources {
 
     @Test
     public void getResultsWhenNoFlightsOnGivenDate() throws ExecutionException, InterruptedException {
-        when(flightInfoService.findFlightByDate(any())).thenReturn(completedFuture(Optional.empty()));
+        when(flightInfoService.findFlightByDate(LocalDate.of(2022,7,9))).thenReturn(completedFuture(Optional.empty()));
         assertThat(
                 flightInfoResource.getResults("2022-07-09").toCompletableFuture().get().getStatusCode(),
                 equalTo(HttpStatus.NO_CONTENT));
@@ -44,7 +44,7 @@ public class FlightInfoResourceTest extends TestResources {
 
     @Test
     public void getResultsWhenFlightsOnGivenDate() throws ExecutionException, InterruptedException {
-        when(flightInfoService.findFlightByDate(any()))
+        when(flightInfoService.findFlightByDate(LocalDate.of(2022,7,8)))
                 .thenReturn(completedFuture(Optional.of(testFlights)));
 
         var response = flightInfoResource.getResults("2022-07-08").toCompletableFuture().get();
