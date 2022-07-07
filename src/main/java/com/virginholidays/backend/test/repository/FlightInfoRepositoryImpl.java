@@ -2,24 +2,28 @@ package com.virginholidays.backend.test.repository;
 
 import com.virginholidays.backend.test.api.Flight;
 import com.virginholidays.backend.test.configuration.DataSourceConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.stereotype.Repository;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.URL;
 import java.time.DayOfWeek;
-import static java.time.LocalTime.parse;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import static java.util.Objects.requireNonNull;
 import java.util.Optional;
+import java.util.concurrent.CompletionStage;
+
+import static java.time.LocalTime.parse;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import java.util.concurrent.CompletionStage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.stereotype.Repository;
 
 /**
  * The implementation of FlightInfoRepository
@@ -63,6 +67,35 @@ public class FlightInfoRepositoryImpl implements FlightInfoRepository {
                     .lines()
                     .skip(1L)
                     .map(this::flight)
+                    .toList();
+
+            // return the results
+            return completedFuture(ofNullable(flights));
+
+        } catch (IOException e) {
+            LOGGER.error("Could not retrieve flight data", e);
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override
+    public CompletionStage<Optional<List<Flight>>> findAllFlightsOnDay(LocalDate givenDay) {
+
+        LOGGER.info("Loading flight information for {}", givenDay);
+
+        // load the resource
+        URL resource = requireNonNull(resourceLoader.getClassLoader()).getResource(dataSourceConfiguration.getCsvLocation());
+
+        // create the reader
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(requireNonNull(resource).openStream()))) {
+
+            // map the flights
+            List<Flight> flights = reader
+                    .lines()
+                    .skip(1L)
+                    .map(this::flight)
+                    .filter(flight -> flight.days().contains(givenDay.getDayOfWeek()))
+                    .sorted(Comparator.comparing(Flight::departureTime))
                     .toList();
 
             // return the results
